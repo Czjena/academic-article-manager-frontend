@@ -1,22 +1,17 @@
 'use client';
-import Guard from '@/components/Guard';
+import ProtectedGuard from '@/app/protected/guard';
 import { useAuth } from '@/app/providers/auth-context';
 
 export default function ProfilePage() {
-    const { user } = useAuth();
+    const { token, isLoggedIn } = useAuth(); // <- zamiast user
 
     return (
-        <Guard>
-            <h1 className="text-2xl font-semibold mb-3">Profil</h1>
-            {user ? (
-                <div className="p-4 bg-gray-800 rounded-xl border border-gray-700">
-                    <p><strong>Email:</strong> {user.email}</p>
-                    <p><strong>Username:</strong> {user.username || 'Brak'}</p>
-                    <pre className="mt-3 p-3 bg-gray-900 rounded-xl">{JSON.stringify(user, null, 2)}</pre>
-                </div>
-            ) : (
-                <p className="text-gray-400">Brak danych użytkownika.</p>
-            )}
-        </Guard>
+        <ProtectedGuard>
+            <div>
+                <h1>Profil użytkownika</h1>
+                <p>Twój token: {token}</p>
+                <p>Status logowania: {isLoggedIn ? 'Zalogowany' : 'Nie zalogowany'}</p>
+            </div>
+        </ProtectedGuard>
     );
 }
