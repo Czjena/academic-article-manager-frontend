@@ -47,8 +47,12 @@ export default function ArticleDetailsPage() {
 
         const data: Article = await res.json();
         setArticle(data);
-      } catch (err: any) {
-        setError(err.message || "Błąd pobierania artykułu");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || "Błąd pobierania artykułu");
+        } else {
+          setError("Błąd pobierania artykułu");
+        }
       } finally {
         setLoading(false);
       }
@@ -82,8 +86,12 @@ export default function ArticleDetailsPage() {
       link.download = `summary_${id}.pdf`;
       link.click();
       window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(`Błąd pobierania PDF streszczenia: ${err.message}`);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert(`Błąd pobierania PDF streszczenia: ${err.message}`);
+      } else {
+        alert("Błąd pobierania PDF streszczenia");
+      }
     }
   };
 

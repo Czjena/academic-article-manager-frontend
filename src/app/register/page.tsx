@@ -24,7 +24,8 @@ export default function RegisterPage() {
         }
 
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL
+            if (!apiUrl) throw new Error('Brak NEXT_PUBLIC_API_URL w .env')
 
             const res = await fetch(`${apiUrl}/api/auth/register`, {
                 method: "POST",
@@ -32,7 +33,7 @@ export default function RegisterPage() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ email, password })
-            });
+            })
 
             if (!res.ok) {
                 const errText = await res.text()
@@ -40,9 +41,13 @@ export default function RegisterPage() {
             }
 
             setSuccess('Konto zostało pomyślnie utworzone!')
-            setTimeout(() => router.push('/login'), 2000) // Przekierowanie po 2 sekundach
-        } catch (err: any) {
-            setError(err.message)
+            setTimeout(() => router.push('/login'), 2000)
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message)
+            } else {
+                setError('Nieznany błąd')
+            }
         }
     }
 
@@ -50,11 +55,14 @@ export default function RegisterPage() {
         <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
             <div className="w-full max-w-md space-y-6">
                 <h1 className="text-2xl font-semibold text-gray-200 text-center">StudyPost</h1>
-                <p className="text-sm text-gray-400 text-center">Masz konto? <a href="/login" className="text-gray-300 hover:underline">Zaloguj się</a></p>
+                <p className="text-sm text-gray-400 text-center">
+                    Masz konto? <a href="/login" className="text-gray-300 hover:underline">Zaloguj się</a>
+                </p>
                 <form onSubmit={handleRegister} className="space-y-4">
                     {error && <p className="text-red-400 text-sm text-center">{error}</p>}
                     {success && <p className="text-green-400 text-sm text-center">{success}</p>}
                     <h2 className="text-lg text-gray-200 text-center">Zarejestruj się</h2>
+
                     <div>
                         <Input
                             id="email"
@@ -66,6 +74,7 @@ export default function RegisterPage() {
                             required
                         />
                     </div>
+
                     <div>
                         <Input
                             id="password"
@@ -77,6 +86,7 @@ export default function RegisterPage() {
                             required
                         />
                     </div>
+
                     <div>
                         <Input
                             id="confirmPassword"
@@ -88,6 +98,7 @@ export default function RegisterPage() {
                             required
                         />
                     </div>
+
                     <Button
                         type="submit"
                         className="w-full bg-gray-600 hover:bg-gray-500 text-white py-2 rounded-md"

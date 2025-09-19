@@ -5,7 +5,7 @@ import UserMenu from "./UserMenu";
 import SearchBar from "./SearchBar";
 
 export default function NavBar() {
-  const { isLoggedIn, token } = useAuth();
+  const { isLoggedIn } = useAuth(); // usunięto token
 
   return (
       <header className="w-full bg-gray-900/70 backdrop-blur sticky top-0 z-40 border-b border-white/10">

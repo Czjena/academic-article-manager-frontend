@@ -73,7 +73,6 @@ export default function SubmitArticlePage() {
       const data = await res.json();
       const articleId = data.id;
 
-      // jeśli jest plik, od razu wysyłamy
       if (form.file) {
         const payload = new FormData();
         payload.append('file', form.file);
@@ -92,11 +91,13 @@ export default function SubmitArticlePage() {
         setInfo('Zgłoszenie wysłane. Możesz teraz dodać plik.');
       }
 
-      // wyczyść formularz
       setForm({ title: '', authors: '', abstract: '', keywords: '', category: 'Informatyka', file: null });
-
-    } catch (err: any) {
-      setError(err.message || 'Nie udało się wysłać zgłoszenia.');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Nie udało się wysłać zgłoszenia.');
+      } else {
+        setError('Nie udało się wysłać zgłoszenia.');
+      }
     } finally {
       setBusy(false);
     }
@@ -118,33 +119,66 @@ export default function SubmitArticlePage() {
 
               <div>
                 <label className="block text-sm text-gray-300 mb-1">Tytuł</label>
-                <Input value={form.title} onChange={e => setForm(s => ({ ...s, title: e.target.value }))} placeholder="Tytuł artykułu" required className="bg-gray-700 border-0 text-gray-100" />
+                <Input
+                    value={form.title}
+                    onChange={e => setForm(s => ({ ...s, title: e.target.value }))}
+                    placeholder="Tytuł artykułu"
+                    required
+                    className="bg-gray-700 border-0 text-gray-100"
+                />
               </div>
 
               <div>
                 <label className="block text-sm text-gray-300 mb-1">Autorzy (oddziel przecinkami)</label>
-                <Input value={form.authors} onChange={e => setForm(s => ({ ...s, authors: e.target.value }))} placeholder="Jan Kowalski, Anna Nowak" required className="bg-gray-700 border-0 text-gray-100" />
+                <Input
+                    value={form.authors}
+                    onChange={e => setForm(s => ({ ...s, authors: e.target.value }))}
+                    placeholder="Jan Kowalski, Anna Nowak"
+                    required
+                    className="bg-gray-700 border-0 text-gray-100"
+                />
               </div>
 
               <div>
                 <label className="block text-sm text-gray-300 mb-1">Streszczenie</label>
-                <textarea rows={8} value={form.abstract} onChange={e => setForm(s => ({ ...s, abstract: e.target.value }))} placeholder="Krótki opis pracy..." required className="w-full rounded-md bg-gray-700 border-0 text-gray-100 px-3 py-2" />
+                <textarea
+                    rows={8}
+                    value={form.abstract}
+                    onChange={e => setForm(s => ({ ...s, abstract: e.target.value }))}
+                    placeholder="Krótki opis pracy..."
+                    required
+                    className="w-full rounded-md bg-gray-700 border-0 text-gray-100 px-3 py-2"
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">Słowa kluczowe (oddziel przecinkami)</label>
-                  <Input value={form.keywords} onChange={e => setForm(s => ({ ...s, keywords: e.target.value }))} placeholder="AI, grafy, sieci neuronowe" required className="bg-gray-700 border-0 text-gray-100" />
+                  <Input
+                      value={form.keywords}
+                      onChange={e => setForm(s => ({ ...s, keywords: e.target.value }))}
+                      placeholder="AI, grafy, sieci neuronowe"
+                      required
+                      className="bg-gray-700 border-0 text-gray-100"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">Kategoria / dział</label>
-                  <select value={form.category} onChange={e => setForm(s => ({ ...s, category: e.target.value }))} required className="w-full rounded-md bg-gray-700 border-0 text-gray-100 px-3 py-2">
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  <select
+                      value={form.category}
+                      onChange={e => setForm(s => ({ ...s, category: e.target.value }))}
+                      required
+                      className="w-full rounded-md bg-gray-700 border-0 text-gray-100 px-3 py-2"
+                  >
+                    {CATEGORIES.map(c => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              {/* nowe pole pliku */}
               <div>
                 <label className="block text-sm text-gray-300 mb-2">Plik (PDF / DOCX / LaTeX)</label>
                 <input
@@ -157,8 +191,12 @@ export default function SubmitArticlePage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Button type="button" variant="outline" onClick={saveDraft} className="border-gray-600 text-black hover:bg-gray-700">Zapisz szkic</Button>
-                <Button type="submit" disabled={busy} className="bg-blue-600 hover:bg-blue-500">{busy ? 'Wysyłanie…' : 'Wyślij zgłoszenie'}</Button>
+                <Button type="button" variant="outline" onClick={saveDraft} className="border-gray-600 text-black hover:bg-gray-700">
+                  Zapisz szkic
+                </Button>
+                <Button type="submit" disabled={busy} className="bg-blue-600 hover:bg-blue-500">
+                  {busy ? 'Wysyłanie…' : 'Wyślij zgłoszenie'}
+                </Button>
               </div>
             </form>
           </CardContent>

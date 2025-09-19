@@ -62,8 +62,12 @@ export default function LoginPage() {
 
       await login(token);
       router.replace('/articles');
-    } catch (err: any) {
-      setError(err?.message || 'Nie udało się zalogować');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Nie udało się zalogować');
+      } else {
+        setError('Nie udało się zalogować');
+      }
     } finally {
       setBusy(false);
     }

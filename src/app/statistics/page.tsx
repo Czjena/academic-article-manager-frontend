@@ -26,9 +26,14 @@ export default function StatisticsPage() {
   const { isLoggedIn } = useAuth();
   const [range, setRange] = useState<RangeId>('30d');
   const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch statystyk
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      setLoading(false);
+      return;
+    }
 
     const fetchStats = async () => {
       try {
@@ -43,23 +48,15 @@ export default function StatisticsPage() {
         setStats(data);
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchStats();
   }, [isLoggedIn]);
 
-  if (!isLoggedIn) {
-    return (
-        <div className="text-center py-20">
-          <p className="text-lg text-gray-300 mb-4">Aby przeglądać statystyki, prosimy się zalogować.</p>
-          <Link href="/login" className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-            Zaloguj się
-          </Link>
-        </div>
-    );
-  }
-
+  // Hooki muszą być zawsze wywołane
   const kpis = useMemo(() => {
     if (!stats) return [];
     return [
@@ -79,8 +76,44 @@ export default function StatisticsPage() {
     ];
   }, [stats]);
 
-  if (!stats) return <div>Ładowanie statystyk...</div>;
+  // Widok dla niezalogowanego użytkownika
+  if (!isLoggedIn) {
+    return (
+        <div className="text-center py-20">
+          <p className="text-lg text-gray-300 mb-4">
+            Musisz się zalogować, aby przeglądać statystyki.
+          </p>
+          <Link
+              href="/login"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
+            Zaloguj się
+          </Link>
+        </div>
+    );
+  }
 
+  // Loader podczas pobierania statystyk
+  if (loading) {
+    return (
+        <div className="text-center py-20">
+          <p className="text-lg text-gray-300 mb-4">Ładowanie statystyk...</p>
+        </div>
+    );
+  }
+
+  // Jeśli zalogowany, ale brak statystyk
+  if (!stats) {
+    return (
+        <div className="text-center py-20">
+          <p className="text-lg text-gray-300 mb-4">
+            Brak statystyk do wyświetlenia.
+          </p>
+        </div>
+    );
+  }
+
+  // Dashboard
   return (
       <div className="space-y-4">
         {/* FILTRY */}
@@ -92,7 +125,11 @@ export default function StatisticsPage() {
                 onChange={e => setRange(e.target.value as RangeId)}
                 className="rounded-lg bg-gray-800 border border-gray-700 px-3 py-2"
             >
-              {RANGES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+              {RANGES.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+              ))}
             </select>
           </div>
         </div>

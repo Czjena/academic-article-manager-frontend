@@ -5,13 +5,18 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/app/providers/auth-context';
 
+interface ReviewResponse {
+    error?: string;
+    message?: string;
+}
+
 export default function ReviewPage() {
     const router = useRouter();
     const { articleId } = useParams<{ articleId: string }>();
     const { token } = useAuth();
 
     const [content, setContent] = useState('');
-    const [rating, setRating] = useState<number>(5); // mock rating domyślnie 5
+    const [rating, setRating] = useState<number>(5); // domyślna ocena
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -36,18 +41,22 @@ export default function ReviewPage() {
                 body: JSON.stringify({ articleId, content, rating }),
             });
 
-            const resData = await res.json().catch(() => ({}));
+            const resData: ReviewResponse = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(resData?.error || `Błąd wysyłania recenzji (${res.status})`);
+                throw new Error(resData.error || `Błąd wysyłania recenzji (${res.status})`);
             }
 
             setSuccess('Recenzja została dodana!');
             setContent('');
             setRating(5);
             router.push(`/articles`);
-        } catch (err: any) {
-            setError(err.message || 'Błąd wysyłania recenzji');
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Nieznany błąd wysyłania recenzji');
+            }
         } finally {
             setLoading(false);
         }
@@ -62,14 +71,14 @@ export default function ReviewPage() {
             {success && <p className="text-green-400">{success}</p>}
 
             <form onSubmit={submitReview} className="space-y-2">
-                <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Napisz recenzję..."
-                    className="w-full p-2 border rounded bg-gray-800 border-gray-700 text-white"
-                    rows={6}
-                    required
-                />
+        <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Napisz recenzję..."
+            className="w-full p-2 border rounded bg-gray-800 border-gray-700 text-white"
+            rows={6}
+            required
+        />
 
                 <div className="flex items-center gap-2">
                     <label className="text-gray-300">Ocena:</label>
