@@ -3,13 +3,18 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers/auth-context";
 
-export default function Guard({ children }: { children: React.ReactNode }) {
+export default function ProtectedGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { isLoggedIn } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
+    if (!isLoggedIn) {
+      router.replace("/login");
+    }
+  }, [isLoggedIn, router]);
 
-  if (loading || !user) return null; // możesz dodać spinner
+  // Jeśli nie jesteś zalogowany, możesz zwrócić loader/spinner albo null
+  if (!isLoggedIn) return null;
+
   return <>{children}</>;
 }
