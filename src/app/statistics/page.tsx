@@ -1,18 +1,10 @@
 'use client';
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/app/providers/auth-context';
-import Link from 'next/link';
-
-const RechartsClient = dynamic(() => import('./RechartsClient'), { ssr: false });
-
-const RANGES = [
-  { id: '30d', label: 'Ostatnie 30 dni' },
-  { id: '90d', label: 'Ostatnie 90 dni' },
-  { id: 'ytd', label: 'Rok bieżący (YTD)' },
-] as const;
-
-type RangeId = typeof RANGES[number]['id'];
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  PieChart, Pie, Cell, Legend
+} from 'recharts';
 
 type StatsResponse = {
   submitted: number;
@@ -20,49 +12,28 @@ type StatsResponse = {
   published: number;
 };
 
-// BASE_URL musi być ustawione w env
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-if (!BASE_URL) {
-  throw new Error(
-      "Brak zmiennej środowiskowej NEXT_PUBLIC_API_BASE_URL! Ustaw ją w .env.local lub w Vercel."
-  );
-}
+type KPI = { label: string; value: number };
+type Monthly = { m: string; submitted: number; published: number };
+type Slice = { name: string; value: number };
 
-export default function StatisticsPage() {
-  const { isLoggedIn } = useAuth();
-  const [range, setRange] = useState<RangeId>('30d');
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://academic-article-manager-backend.up.railway.app';
+
+export default function RechartsClient() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      setLoading(false);
-      return;
-    }
-
     const fetchStats = async () => {
-      setLoading(true);
-      setError(null);
       try {
         const token = localStorage.getItem('jwt');
-        if (!token) throw new Error('Brak tokenu JWT');
-
-        const res = await fetch(`${BASE_URL}/api/articles/statistics?range=${range}`, {
+        const res = await fetch(`${BASE_URL}/api/articles/statistics`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          const msg = data?.message || data?.error || `${res.status} ${res.statusText}`;
-          throw new Error(msg);
-        }
-
+        if (!res.ok) throw new Error('Błąd pobierania statystyk');
         const data: StatsResponse = await res.json();
         setStats(data);
-      } catch (err: unknown) {
-        setStats(null);
-        setError(err instanceof Error ? err.message : 'Błąd pobierania statystyk');
+      } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
@@ -70,9 +41,9 @@ export default function StatisticsPage() {
     };
 
     fetchStats();
-  }, [isLoggedIn, range]);
+  }, []);
 
-  const kpis = useMemo(() => {
+  const kpis: KPI[] = useMemo(() => {
     if (!stats) return [];
     return [
       { label: 'Zgłoszone', value: stats.submitted },
@@ -82,7 +53,7 @@ export default function StatisticsPage() {
     ];
   }, [stats]);
 
-  const statusPie = useMemo(() => {
+  const statusPie: Slice[] = useMemo(() => {
     if (!stats) return [];
     return [
       { name: 'Zgłoszony', value: stats.submitted },
@@ -91,34 +62,15 @@ export default function StatisticsPage() {
     ];
   }, [stats]);
 
-  if (!isLoggedIn) {
-    return (
-        <div className="text-center py-20">
-          <p className="text-lg text-gray-300 mb-4">
-            Musisz się zalogować, aby przeglądać statystyki.
-          </p>
-          <Link
-              href="/login"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Zaloguj się
-          </Link>
-        </div>
-    );
-  }
+  const monthly: Monthly[] = useMemo(() => {
+    if (!stats) return [];
+    return [{ m: 'Aktualne', submitted: stats.submitted, published: stats.published }];
+  }, [stats]);
 
   if (loading) {
     return (
         <div className="text-center py-20">
           <p className="text-lg text-gray-300 mb-4">Ładowanie statystyk...</p>
-        </div>
-    );
-  }
-
-  if (error) {
-    return (
-        <div className="text-center py-20">
-          <p className="text-lg text-red-400 mb-4">{error}</p>
         </div>
     );
   }
@@ -131,32 +83,61 @@ export default function StatisticsPage() {
     );
   }
 
+  const pieColors = ["#60a5fa", "#fbbf24", "#93c5fd", "#f87171", "#34d399"];
+
   return (
-      <div className="space-y-4">
-        {/* Filtry */}
-        <div className="flex flex-wrap gap-2 items-center justify-between">
-          <h1 className="text-2xl font-semibold">Statystyki</h1>
-          <div className="flex gap-2">
-            <select
-                value={range}
-                onChange={e => setRange(e.target.value as RangeId)}
-                className="rounded-lg bg-gray-800 border border-gray-700 px-3 py-2"
-            >
-              {RANGES.map(r => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-              ))}
-            </select>
-          </div>
+      <div className="space-y-6">
+        {/* KPI */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {kpis.map((k, i) => (
+              <Card key={i} className="bg-gray-800 border-gray-700">
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-400">{k.label}</div>
+                  <div className="text-3xl font-semibold mt-1 text-white">{k.value}</div>
+                </CardContent>
+              </Card>
+          ))}
         </div>
 
-        {/* Dashboard */}
-        <RechartsClient
-            kpis={kpis}
-            monthly={[{ m: 'Aktualne', submitted: stats.submitted, published: stats.published }]}
-            statusPie={statusPie}
-        />
+        {/* Wykres liniowy */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="mb-3 text-gray-200 font-medium">Zgłoszenia vs publikacje</div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthly} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="m" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="submitted" name="Zgłoszone" />
+                  <Line type="monotone" dataKey="published" name="Opublikowane" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Wykres kołowy */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="mb-3 text-gray-200 font-medium">Udział statusów</div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={statusPie} dataKey="value" nameKey="name" outerRadius={100} label>
+                    {statusPie.map((_, i) => (
+                        <Cell key={i} fill={pieColors[i % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
       </div>
   );
 }
