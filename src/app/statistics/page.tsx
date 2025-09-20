@@ -20,15 +20,21 @@ type StatsResponse = {
   published: number;
 };
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+// BASE_URL musi być ustawione w env
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+if (!BASE_URL) {
+  throw new Error(
+      "Brak zmiennej środowiskowej NEXT_PUBLIC_API_BASE_URL! Ustaw ją w .env.local lub w Vercel."
+  );
+}
 
 export default function StatisticsPage() {
   const { isLoggedIn } = useAuth();
   const [range, setRange] = useState<RangeId>('30d');
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch statystyk
   useEffect(() => {
     if (!isLoggedIn) {
       setLoading(false);
@@ -36,17 +42,27 @@ export default function StatisticsPage() {
     }
 
     const fetchStats = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const token = localStorage.getItem('jwt');
-        const res = await fetch(`${BASE_URL}/api/articles/statistics`, {
+        if (!token) throw new Error('Brak tokenu JWT');
+
+        const res = await fetch(`${BASE_URL}/api/articles/statistics?range=${range}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) throw new Error('Błąd pobierania statystyk');
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const msg = data?.message || data?.error || `${res.status} ${res.statusText}`;
+          throw new Error(msg);
+        }
 
         const data: StatsResponse = await res.json();
         setStats(data);
-      } catch (err) {
+      } catch (err: unknown) {
+        setStats(null);
+        setError(err instanceof Error ? err.message : 'Błąd pobierania statystyk');
         console.error(err);
       } finally {
         setLoading(false);
@@ -54,9 +70,8 @@ export default function StatisticsPage() {
     };
 
     fetchStats();
-  }, [isLoggedIn]);
+  }, [isLoggedIn, range]);
 
-  // Hooki muszą być zawsze wywołane
   const kpis = useMemo(() => {
     if (!stats) return [];
     return [
@@ -76,7 +91,6 @@ export default function StatisticsPage() {
     ];
   }, [stats]);
 
-  // Widok dla niezalogowanego użytkownika
   if (!isLoggedIn) {
     return (
         <div className="text-center py-20">
@@ -93,7 +107,6 @@ export default function StatisticsPage() {
     );
   }
 
-  // Loader podczas pobierania statystyk
   if (loading) {
     return (
         <div className="text-center py-20">
@@ -102,21 +115,25 @@ export default function StatisticsPage() {
     );
   }
 
-  // Jeśli zalogowany, ale brak statystyk
-  if (!stats) {
+  if (error) {
     return (
         <div className="text-center py-20">
-          <p className="text-lg text-gray-300 mb-4">
-            Brak statystyk do wyświetlenia.
-          </p>
+          <p className="text-lg text-red-400 mb-4">{error}</p>
         </div>
     );
   }
 
-  // Dashboard
+  if (!stats) {
+    return (
+        <div className="text-center py-20">
+          <p className="text-lg text-gray-300 mb-4">Brak statystyk do wyświetlenia.</p>
+        </div>
+    );
+  }
+
   return (
       <div className="space-y-4">
-        {/* FILTRY */}
+        {/* Filtry */}
         <div className="flex flex-wrap gap-2 items-center justify-between">
           <h1 className="text-2xl font-semibold">Statystyki</h1>
           <div className="flex gap-2">
@@ -134,7 +151,7 @@ export default function StatisticsPage() {
           </div>
         </div>
 
-        {/* DASHBOARD */}
+        {/* Dashboard */}
         <RechartsClient
             kpis={kpis}
             monthly={[{ m: 'Aktualne', submitted: stats.submitted, published: stats.published }]}
